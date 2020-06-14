@@ -1,6 +1,15 @@
 # MQTT bridge for TWELITE PAL
 TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーPAL](https://mono-wireless.com/jp/products/twelite-pal/sense/amb-pal.html)のみ対応しています。サーバーに配置しなくてもセンサ出力を確認できる HTML のビューアーもついています。
 
+## 例
+|トピック|メッセージ|
+|---|---|
+|Temperature|{"Id":"AMB_02","Value":22.85}|
+|Humidity|{"Id":"AMB_02","Value":77.38}|
+|Illuminance|{"Id":"AMB_02","Value":100}|
+|Voltage|{"Id":"AMB_02","Value":2.195}|
+|Lqi|{"Id":"AMB_02","Value":-59.7}|
+
 - 参考: https://twitter.com/ksasao/status/1271816152935657472
 
 ![外観](bridge.jpg)
@@ -22,9 +31,9 @@ TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーP
 |GND|GND|
 |G21|6|
 
-2. Arduino IDE で TWELITE_MQTT.ino を開き、SSID, PASSWORD, MQTT ブローカーのIPアドレスを書き換えて、M5 ATOM に書き込みます
+2. Arduino IDE で TWELITE_MQTT.ino を開き、SSID, PASSWORD, MQTT ブローカーのIPアドレスを書き換えて、M5 ATOM に書き込みます。
 
-3. ```viewer/index.html``` をエディタで開き、下記を環境に合わせて変更します。
+3. ```viewer/index.html``` をエディタで開き、下記を環境に合わせて変更します。なお、MQTTブローカーは MQTT over WebSocket が使えるように設定しておく必要があります。
 ```
 let mqttBrokerAddress = "192.168.3.40";
 let mqttOverWebSocketPort = 8001;
