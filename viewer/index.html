@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+    <script src="https://unpkg.com/chartjs-plugin-colorschemes"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="mqttchart.js"></script>
+    <link rel="stylesheet" href="style.css">
+     <title>TWELITE PAL Viewer</title>
+</head>
+<body>
+    <div>
+        <select name="duration" id="select-1">
+            <option value="60">1 min.</option>
+            <option value="300">5 min.</option>
+            <option value="1200" selected>20 min.</option>
+            <option value="3600">1 hour</option>
+        </select>
+    </div>
+    <div id="container">
+        <div><canvas id="chart1"></canvas></div>
+        <div><canvas id="chart2"></canvas></div>
+        <div><canvas id="chart3"></canvas></div>
+        <div><canvas id="chart4"></canvas></div>
+        <div><canvas id="chart5"></canvas></div>
+    </div>
+</body>
+<script>
+let mqttBrokerAddress = "192.168.3.40";
+let mqttOverWebSocketPort = 8001;
+
+$(window).on('load', function() {
+    // id, MQTT topic, label (Y-axis), min, max
+    setChart('chart1','Temperature','Temperature (℃)', undefined, undefined); // 'undefined' means auto
+    setChart('chart2','Humidity','Humidity (%RH)', undefined, undefined);
+    setChart('chart3','Illuminance','Illuminance (lux)', 0, undefined);
+    setChart('chart4','Voltage','Voltage (V)', 0,3.5);
+    setChart('chart5','Lqi','LQI (dBm)', -100,0);
+
+    //  MQTT Broker IP Address, MQTT over Websocket Port, duration (ms), repeat timer (ms) 
+    var duration = $('#select-1 option:selected').val() * 1000;
+    startChart(mqttBrokerAddress, mqttOverWebSocketPort, duration, 10 * 1000);
+
+    $(function() {
+        $('#container').sortable();
+        $('#container').disableSelection();
+    } );
+    // Update duration
+    $(function(){
+        $('select').change(function(){
+            let val = $(this).val();
+            console.log("Duration changed: " + val);
+            setDuration(val);
+        });
+    });
+});
+
+
+</script>
+</html>
