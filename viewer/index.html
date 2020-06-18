@@ -27,6 +27,7 @@
         <div><canvas id="chart3"></canvas></div>
         <div><canvas id="chart4"></canvas></div>
         <div><canvas id="chart5"></canvas></div>
+        <div><canvas id="chart6"></canvas></div>
     </div>
 </body>
 <script>
@@ -40,6 +41,7 @@ $(window).on('load', function() {
     setChart('chart3','Illuminance','Illuminance (lux)', 0, undefined);
     setChart('chart4','Voltage','Voltage (V)', 0,3.5);
     setChart('chart5','Lqi','LQI (dBm)', -100,0);
+    setChart('chart6','Magnet','Magnet (0:None,1:N,2:S)', 0,2);
 
     //  MQTT Broker IP Address, MQTT over Websocket Port, duration (ms), repeat timer (ms) 
     var duration = $('#select-1 option:selected').val() * 1000;

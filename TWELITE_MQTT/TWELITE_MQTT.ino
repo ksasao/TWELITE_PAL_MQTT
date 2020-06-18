@@ -20,6 +20,9 @@ AtomClient ac;
 const int MAX_RX_BUFFER_SIZE = 1024;
 char rx_buffer[MAX_RX_BUFFER_SIZE];
 int rx_buffer_pointer = 0;
+int logicalId=0;
+float lqi = 0;
+int sensors = 0;
 
 static void initialize_wifi()
 {
@@ -58,18 +61,28 @@ void loop() {
 }
 
 void parseData(char* str){
+  // Parse Logical Device ID & LQI
+  logicalId = toByte(str+23);
+  lqi = (7.0 * toByte(str+9)-1970.0)/20.0;
+
   int board = toByte(str+27) & 0x1F;
-  if(board != 2){ // None = 0, Mag = 0x01, Amb = 0x02, Mot = 0x03
-    return;
+  sensors = toByte(str+29);
+  char* p = str + 31;
+  switch(board){ // None = 0, Mag = 0x01, Amb = 0x02, Mot = 0x03
+    case 0x02:
+      parseAsAmb(p);
+      break;
+    case 0x01:
+      parseAsMag(p);
+      break;
+    default:
+      break;
   }
+}
 
-  // Logical Device ID
-  int id = toByte(str+23);
-  float lqi = (7.0 * toByte(str+9)-1970.0)/20.0;
-
-  // Parse sensor data
-  int sensors = toByte(str+29);
-  char* p = str+31;
+// Parse sensor data
+// https://mono-wireless.com/jp/products/TWE-APPS/App_pal/parent.html
+void parseAsAmb(char* p){
   uint32_t voltage = 0;
   float temp = 0;
   float humi = 0;
@@ -107,8 +120,8 @@ void parseData(char* str){
   // Send to MQTT
   ac.reconnect();
 
-  char idstr[10] = "00";
-  sprintf(idstr, "%02d", id);
+  char idstr[4] = "00";
+  snprintf(idstr, sizeof(idstr), "%02d", logicalId);
   String base = "{\"Id\":\"AMB_" + String(idstr) + "\",\"Value\":";  
   String s = "";
   
@@ -118,6 +131,45 @@ void parseData(char* str){
   ac.publish("Voltage", base + String(voltage/1000.0,3) + "}");
   ac.publish("Lqi", base + String(lqi,1) + "}");
 }
+
+void parseAsMag(char* p){
+  uint32_t voltage = 0;
+  int mag = 0;
+  for(int i=0; i<sensors;i++){
+    int sta = toByte(p);
+    int source = toByte(p+2);
+    int ext = toByte(p+4);
+
+    switch(source){
+      case 0x30: // Voltage(mV)
+        if (ext == 8)
+        {
+            voltage = toUInt16(p + 8);
+        }
+        p += 12;
+        break;
+      case 0x00: // Hall IC
+        mag = toByte(p + 8);
+        p += 10;
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Send to MQTT
+  ac.reconnect();
+
+  char idstr[4] = "000";
+  snprintf(idstr, sizeof(idstr), "%02d", logicalId);
+  String base = "{\"Id\":\"MAG_" + String(idstr) + "\",\"Value\":";  
+  String s = "";
+  
+  ac.publish("Magnet", base + String(mag & 3) + "}"); // 0: none / 1: N / 2: S / [bit7] 0: changed / 1: periodic transfer
+  ac.publish("Voltage", base + String(voltage/1000.0,3) + "}");
+  ac.publish("Lqi", base + String(lqi,1) + "}");
+}
+
 
 int16_t toInt16(char* str){
   return toByte(str)<<8 | toByte(str+2);

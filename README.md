@@ -1,5 +1,5 @@
 # MQTT bridge for TWELITE PAL
-TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーPAL](https://mono-wireless.com/jp/products/twelite-pal/sense/amb-pal.html)のみ対応しています。サーバーに配置しなくてもセンサ出力を確認できる HTML のビューアーもついています。
+TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーPAL](https://mono-wireless.com/jp/products/twelite-pal/sense/amb-pal.html)と[開閉センサーPAL](https://mono-wireless.com/jp/products/twelite-pal/sense/openclose-pal.html)に対応しています。サーバーに配置しなくてもセンサ出力を確認できる HTML のビューアーもついています。
 
 ## 例
 |トピック|メッセージ|
@@ -9,6 +9,7 @@ TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーP
 |Illuminance|{"Id":"AMB_02","Value":100}|
 |Voltage|{"Id":"AMB_02","Value":2.195}|
 |Lqi|{"Id":"AMB_02","Value":-59.7}|
+|Magnet|{"Id":"MAG_01","Value":2}|
 
 - 参考: https://twitter.com/ksasao/status/1271816152935657472
 
