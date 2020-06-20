@@ -20,11 +20,12 @@ TWELITE PAL (親機) の出力を MQTT に変換します。[環境センサーP
 ![ブラウザの表示イメージ](viewer.png)
 
 # 準備するもの
-環境センサーPAL以外に下記のものが必要です。
+TWELITE PAL以外に下記のものが必要です。
 
 - TWELITE PAL [親機のファームウェアを書き込み](https://mono-wireless.com/jp/products/TWE-APPS/App_pal/parent.html)済みの TWELITE DIP
 - [M5 ATOM Lite](https://www.switch-science.com/catalog/6262/) (M5 ATOM Matrixも可)
 - [ATOM HUB Proto Kit](https://m5stack.com/products/atom-hub-proto-kit) (ケースです。他のもので代用可能。)
+- [Mosquitto](https://www.google.com/search?q=Mosquitto+mqtt&ie=&oe=) などの MQTT Broker (MQTT over WebSocket を有効化してください)
 
 # 設定
 1. M5 ATOM と TWELITE DIP を下記のように接続します。他のピンはそのままでかまいません。
