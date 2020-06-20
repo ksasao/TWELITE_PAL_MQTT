@@ -20,9 +20,6 @@ AtomClient ac;
 const int MAX_RX_BUFFER_SIZE = 1024;
 char rx_buffer[MAX_RX_BUFFER_SIZE];
 int rx_buffer_pointer = 0;
-int logicalId=0;
-float lqi = 0;
-int sensors = 0;
 
 static void initialize_wifi()
 {
@@ -52,7 +49,11 @@ void loop() {
       rx_buffer[rx_buffer_pointer+1]='\0';
       rx_buffer_pointer = 0;
       Serial.print(rx_buffer);
-      parseData(rx_buffer);
+      if(isValid(rx_buffer)){
+        parseData(rx_buffer);
+      }else{
+        Serial.println("* parse error *");
+      }
     }else if(rx_buffer_pointer <MAX_RX_BUFFER_SIZE-2){
       rx_buffer_pointer++;
     }
@@ -60,81 +61,39 @@ void loop() {
   M5.update();
 }
 
-void parseData(char* str){
-  // Parse Logical Device ID & LQI
-  logicalId = toByte(str+23);
-  lqi = (7.0 * toByte(str+9)-1970.0)/20.0;
-
-  int board = toByte(str+27) & 0x1F;
-  sensors = toByte(str+29);
-  char* p = str + 31;
-  switch(board){ // None = 0, Mag = 0x01, Amb = 0x02, Mot = 0x03
-    case 0x02:
-      parseAsAmb(p);
-      break;
-    case 0x01:
-      parseAsMag(p);
-      break;
-    default:
-      break;
+bool isValid(char* str){
+  if(str[0] != ':'){
+    return false;
   }
+  int len = strlen(str);
+  int sum = 0;
+  for(int i=1; i<len; i+=2){
+    sum += toByte(str+i);
+  }
+  return !(sum & 0xFF);
 }
 
-// Parse sensor data
-// https://mono-wireless.com/jp/products/TWE-APPS/App_pal/parent.html
-void parseAsAmb(char* p){
-  uint32_t voltage = 0;
-  float temp = 0;
-  float humi = 0;
-  uint32_t lux = 0;
-  for(int i=0; i<sensors;i++){
-    int sta = toByte(p);
-    int source = toByte(p+2);
-    int ext = toByte(p+4);
-
-    switch(source){
-      case 0x30: // Voltage(mV)
-        if (ext == 8)
-        {
-            voltage = toUInt16(p + 8);
-        }
-        p += 12;
-        break;
-      case 0x01: // Temperature
-        temp = toInt16(p + 8) / 100.0;
-        p += 12;
-        break;
-      case 0x02: // Humidity
-        humi = toUInt16(p + 8) / 100.0;
-        p += 12;
-        break;
-      case 0x03: // Lux
-        lux = toUInt32(p + 8);
-        p += 16;
-        break;
-      default:
-        break;
-    }
-  }
-
-  // Send to MQTT
-  ac.reconnect();
+void parseData(char* str){
+  const String boardType[4] = {"NONE","MAG","AMB","MOT"};
+  
+  // Parse Logical Device ID & LQI
+  float lqi = (7.0 * toByte(str+9)-1970.0)/20.0;
+  int logicalId = toByte(str+23);
+  int board = toByte(str+27) & 0x1F;
 
   char idstr[4] = "00";
   snprintf(idstr, sizeof(idstr), "%02d", logicalId);
-  String base = "{\"Id\":\"AMB_" + String(idstr) + "\",\"Value\":";  
-  String s = "";
-  
-  ac.publish("Temperature", base + String(temp,2) + "}");
-  ac.publish("Humidity", base + String(humi,2) + "}");
-  ac.publish("Illuminance", base + String(lux) + "}");
-  ac.publish("Voltage", base + String(voltage/1000.0,3) + "}");
-  ac.publish("Lqi", base + String(lqi,1) + "}");
-}
+  String base = "{\"Id\":\"" + boardType[board] + "_" + String(idstr) + "\",\"Value\":";  
 
-void parseAsMag(char* p){
-  uint32_t voltage = 0;
-  int mag = 0;
+  // Send to MQTT
+  ac.reconnect();
+  ac.publish("Lqi", base + String(lqi,1) + "}");
+
+  int sensors = toByte(str+29);
+  char* p = str + 31;
+
+  // Parse sensor data
+  // https://mono-wireless.com/jp/products/TWE-APPS/App_pal/parent.html
   for(int i=0; i<sensors;i++){
     int sta = toByte(p);
     int source = toByte(p+2);
@@ -144,32 +103,68 @@ void parseAsMag(char* p){
       case 0x30: // Voltage(mV)
         if (ext == 8)
         {
-            voltage = toUInt16(p + 8);
+            float voltage = toUInt16(p + 8) / 1000.0;
+            ac.publish("Voltage", base + String(voltage,3) + "}");
         }
         p += 12;
         break;
       case 0x00: // Hall IC
-        mag = toByte(p + 8);
-        p += 10;
+        {
+          int mag = toByte(p + 8);
+          ac.publish("Magnet", base + String(mag & 3) + "}"); // 0: none / 1: N / 2: S / [bit7] 0: changed / 1: periodic transfer
+          p += 10;
+        }
+        break;
+      case 0x01: // Temperature
+        {
+          float temp = toInt16(p + 8) / 100.0;
+          ac.publish("Temperature", base + String(temp,2) + "}");
+          p += 12;
+        }
+        break;
+      case 0x02: // Humidity
+        {
+          float humi = toUInt16(p + 8) / 100.0;
+          ac.publish("Humidity", base + String(humi,2) + "}");
+          p += 12;
+        }
+        break;
+      case 0x03: // Lux
+        {
+          uint32_t lux = toUInt32(p + 8);
+          ac.publish("Illuminance", base + String(lux) + "}");
+          p += 16;
+        }
+        break;
+      case 0x04: // Acc
+        {
+          float x = 0;
+          float y = 0;
+          float z = 0;
+          p = p + 8;
+          for(int j=0; j<16; j++){
+            x += (int32_t)toInt16(p);
+            y += (int32_t)toInt16(p+4);
+            z += (int32_t)toInt16(p+8);
+            p += 20;
+          }
+          x *= (9.80665/1000.0/16.0);
+          y *= (9.80665/1000.0/16.0);
+          z *= (9.80665/1000.0/16.0);
+          String xs= "{\"Id\":\"" + boardType[board] + "_" + String(idstr) + "_X\",\"Value\":";  
+          ac.publish("Acceleration", xs + String(x,3) + "}");
+          String ys= "{\"Id\":\"" + boardType[board] + "_" + String(idstr) + "_Y\",\"Value\":";  
+          ac.publish("Acceleration", ys + String(y,3) + "}");
+          String zs= "{\"Id\":\"" + boardType[board] + "_" + String(idstr) + "_Z\",\"Value\":";  
+          ac.publish("Acceleration", zs + String(z,3) + "}");
+          sensors = 0;
+        }
         break;
       default:
         break;
     }
   }
-
-  // Send to MQTT
-  ac.reconnect();
-
-  char idstr[4] = "000";
-  snprintf(idstr, sizeof(idstr), "%02d", logicalId);
-  String base = "{\"Id\":\"MAG_" + String(idstr) + "\",\"Value\":";  
-  String s = "";
-  
-  ac.publish("Magnet", base + String(mag & 3) + "}"); // 0: none / 1: N / 2: S / [bit7] 0: changed / 1: periodic transfer
-  ac.publish("Voltage", base + String(voltage/1000.0,3) + "}");
-  ac.publish("Lqi", base + String(lqi,1) + "}");
 }
-
 
 int16_t toInt16(char* str){
   return toByte(str)<<8 | toByte(str+2);
