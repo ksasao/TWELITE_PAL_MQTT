@@ -75,19 +75,20 @@ CUE/ARIAを利用する場合は、同様に、アプリケーションIDを```0
 ## 組み立て
 
 1. M5 ATOM と TWELITE DIP を下記のように接続します。他のピンはそのままでかまいません。
-|M5 ATOM|TWELITE DIP|
-|---|---|
-|3V3|VCC|
-|GND|GND|
-|G21|6|
+
+    |M5 ATOM|TWELITE DIP|
+    |---|---|
+    |3V3|VCC|
+    |GND|GND|
+    |G21|6|
 
 2. Arduino IDE で TWELITE_MQTT.ino を開き、SSID, PASSWORD, MQTT ブローカーのIPアドレスを書き換えて、M5 ATOM に書き込みます。
 
 3. ```viewer/index.html``` をエディタで開き、下記を環境に合わせて変更します。なお、MQTTブローカーは MQTT over WebSocket が使えるように設定しておく必要があります。
 
-```txt
-let mqttBrokerAddress = "192.168.3.40";
-let mqttOverWebSocketPort = 8001;
-```
+    ```txt
+    let mqttBrokerAddress = "192.168.3.40";
+    let mqttOverWebSocketPort = 8001;
+    ```
 
 4. ```viewer/index.html``` をブラウザで開くと TWELITE PAL からのデータを確認できます。ファイルはサーバーに配置する必要はありません。
