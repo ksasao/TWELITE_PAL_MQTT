@@ -12,6 +12,7 @@
 #include "M5Atom.h"
 #include "AtomClient.h"
 
+
 static char ssid[64]="your-ssid";  // SSID
 static char pass[64]="your-wifi-password";  // password
 static char mqtt[64]="your-MQTT-broker-ip-address"; // MQTT Address
@@ -74,12 +75,18 @@ bool isValid(char* str){
 }
 
 void parseData(char* str){
-  const String boardType[4] = {"NONE","MAG","AMB","MOT"};
+  const int maxType = 7;
+  const String boardType[maxType] = {"UNKNOWN","MAG","AMB","MOT","NOTICE","QUE","ARIA"};
   
   // Parse Logical Device ID & LQI
   float lqi = (7.0 * toByte(str+9)-1970.0)/20.0;
   int logicalId = toByte(str+23);
   int board = toByte(str+27) & 0x1F;
+  Serial.print("board: ");
+  Serial.println(board);
+  if(board>=maxType){
+    board = 0;
+  }
 
   char idstr[4] = "00";
   snprintf(idstr, sizeof(idstr), "%02d", logicalId);
@@ -161,6 +168,10 @@ void parseData(char* str){
         }
         break;
       default:
+        {
+          int skip = toByte(p + 6);
+          p = p + 8 + skip * 2;
+        }
         break;
     }
   }
